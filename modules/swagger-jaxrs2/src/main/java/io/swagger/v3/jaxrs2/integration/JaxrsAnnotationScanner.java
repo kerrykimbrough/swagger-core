@@ -11,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,7 +20,7 @@ import java.util.Set;
 
 public class JaxrsAnnotationScanner<T extends JaxrsAnnotationScanner<T>> implements JaxrsOpenApiScanner {
 
-    static final Set<String> ignored = new HashSet();
+    static final Set<String> ignored = new HashSet<>();
 
     static {
         ignored.addAll(IgnoredPackages.ignored);
@@ -27,7 +28,7 @@ public class JaxrsAnnotationScanner<T extends JaxrsAnnotationScanner<T>> impleme
 
     protected OpenAPIConfiguration openApiConfiguration;
     protected Application application;
-    protected static Logger LOGGER = LoggerFactory.getLogger(JaxrsAnnotationScanner.class);
+    protected static final Logger LOGGER = LoggerFactory.getLogger(JaxrsAnnotationScanner.class);
     protected boolean onlyConsiderResourcePackages = false;
 
     public JaxrsAnnotationScanner application(Application application) {
@@ -58,8 +59,8 @@ public class JaxrsAnnotationScanner<T extends JaxrsAnnotationScanner<T>> impleme
         }
 
         ClassGraph graph = new ClassGraph().enableAllInfo();
-        Set<String> acceptablePackages = new HashSet<String>();
-        Set<Class<?>> output = new HashSet<Class<?>>();
+        Set<String> acceptablePackages = new HashSet<>();
+        Set<Class<?>> output = new HashSet<>();
 
         // if classes are passed, use them
         if (openApiConfiguration.getResourceClasses() != null && !openApiConfiguration.getResourceClasses().isEmpty()) {
@@ -92,6 +93,9 @@ public class JaxrsAnnotationScanner<T extends JaxrsAnnotationScanner<T>> impleme
         try (ScanResult scanResult = graph.scan()) {
             classes = new HashSet<>(scanResult.getClassesWithAnnotation(javax.ws.rs.Path.class.getName()).loadClasses());
             classes.addAll(new HashSet<>(scanResult.getClassesWithAnnotation(OpenAPIDefinition.class.getName()).loadClasses()));
+            if (Boolean.TRUE.equals(openApiConfiguration.isAlwaysResolveAppPath())) {
+                classes.addAll(new HashSet<>(scanResult.getClassesWithAnnotation(ApplicationPath.class.getName()).loadClasses()));
+            }
         }
 
         for (Class<?> cls : classes) {
@@ -113,11 +117,11 @@ public class JaxrsAnnotationScanner<T extends JaxrsAnnotationScanner<T>> impleme
         if (StringUtils.isBlank(classOrPackageName)) {
             return true;
         }
-        return ignored.stream().anyMatch(i -> classOrPackageName.startsWith(i));
+        return ignored.stream().anyMatch(classOrPackageName::startsWith);
     }
 
     @Override
     public Map<String, Object> resources() {
-        return new HashMap<String, Object>();
+        return new HashMap<>();
     }
 }
